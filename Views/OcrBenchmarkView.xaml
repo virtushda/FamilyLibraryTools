@@ -1,0 +1,98 @@
+<UserControl x:Class="FamilyLibraryTools.Views.OcrBenchmarkView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:FamilyLibraryTools.Views"
+             xmlns:media="clr-namespace:FamilyLibraryTools.Media">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid x:Name="FolderControls">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock Text="Benchmark folder" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox x:Name="InputPath" Grid.Column="1" AutomationProperties.Name="Benchmark input folder" />
+            <Button Grid.Column="2" Content="Browse..." Click="OnBrowse" Margin="8,0,0,0" />
+        </Grid>
+        <StackPanel Grid.Row="1" Margin="0,10,0,8">
+            <WrapPanel>
+                <Button x:Name="RunButton" Content="Benchmark both PP-OCR models" Click="OnRun" FontWeight="SemiBold" />
+                <Button x:Name="StopButton" Content="Stop benchmark" Click="OnStop" IsEnabled="False" Margin="8,0" />
+                <TextBlock Text="Read-only · photos in every subfolder" VerticalAlignment="Center" Foreground="#536273" />
+            </WrapPanel>
+            <TextBlock x:Name="Status" Text="Choose a folder. No images will be moved or modified." TextWrapping="Wrap" Margin="0,6,0,0" />
+            <ProgressBar x:Name="Busy" Height="3" IsIndeterminate="True" Visibility="Collapsed" Margin="0,6,0,0" />
+            <Expander Header="Pass criteria and timing" FontSize="12" Margin="0,5,0,0">
+                <TextBlock TextWrapping="Wrap" Margin="6"
+                           Text="PASS requires one unambiguous year/month/day plus an explicitly read valid hour and minute (seconds may be unknown). Date-only results do not pass. PP-OCR mean character score must be at least 90/100; it does not prove correctness. Each image is decoded once; models run serially in rotating order. Times include preparation, OCR, parsing and first-use model loading, but exclude shared scanning/decoding. Models stay loaded for the run and use up to 4 CPU threads. Results and ratings remain in this session until the next run or app close." />
+            </Expander>
+        </StackPanel>
+        <DataGrid x:Name="Summaries" Grid.Row="2" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                  HeadersVisibility="Column" RowHeaderWidth="0" MinHeight="116" MaxHeight="148" FontSize="12" Margin="0,0,0,8">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Method" Binding="{Binding Method}" Width="150" />
+                <DataGridTextColumn Header="Completed" Binding="{Binding Completed}" />
+                <DataGridTextColumn Header="Passed" Binding="{Binding Passed}" />
+                <DataGridTextColumn Header="Date only" Binding="{Binding DateOnly}" />
+                <DataGridTextColumn Header="Errors" Binding="{Binding Errors}" />
+                <DataGridTextColumn Header="Total" Binding="{Binding TotalTime}" />
+                <DataGridTextColumn Header="Avg / image" Binding="{Binding AverageTime}" />
+                <DataGridTextColumn Header="Correct" Binding="{Binding Correct}" />
+                <DataGridTextColumn Header="Incorrect" Binding="{Binding Incorrect}" />
+                <DataGridTextColumn Header="Unsure" Binding="{Binding Uncertain}" />
+                <DataGridTextColumn Header="Reviewed" Binding="{Binding Reviewed}" />
+            </DataGrid.Columns>
+        </DataGrid>
+        <Grid x:Name="Navigation" Grid.Row="3" Margin="0,0,0,8" IsEnabled="False">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Button x:Name="Previous" Content="Previous" Click="OnPrevious" Margin="0,0,8,0" />
+            <ComboBox x:Name="PhotoList" Grid.Column="1" DisplayMemberPath="Label" SelectionChanged="OnPhotoChanged" AutomationProperties.Name="Benchmark photos" />
+            <Button x:Name="Next" Grid.Column="2" Content="Next" Click="OnNext" Margin="8,0,0,0" />
+        </Grid>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Grid Margin="0,0,12,0">
+                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <views:MediaPreview x:Name="Preview" />
+                <DockPanel Grid.Row="1" Margin="0,6,0,0">
+                    <TextBlock Text="Zoom (drag to pan)" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Slider x:Name="Zoom" Minimum="1" Maximum="8" Value="1" ValueChanged="OnZoom" AutomationProperties.Name="Benchmark photo zoom" />
+                </DockPanel>
+                <TextBlock x:Name="PreviewStatus" Grid.Row="2" TextWrapping="Wrap" Foreground="#536273" Margin="0,4,0,0" />
+            </Grid>
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl x:Name="ResultsPanel" IsEnabled="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="White" BorderBrush="#D8E0E8" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,10,10">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock Text="{Binding Timing}" DockPanel.Dock="Right" HorizontalAlignment="Right" Foreground="#536273" />
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Outcome}" FontWeight="SemiBold" Margin="0,4" />
+                                    <TextBlock Text="{Binding DateText}" TextWrapping="Wrap" FontSize="12" />
+                                    <WrapPanel Margin="0,6,0,0">
+                                        <Button Content="Correct" Tag="{x:Static media:BenchmarkVerdict.Correct}" Click="OnVerdict" Padding="8,3" Margin="0,0,4,0" />
+                                        <Button Content="Incorrect" Tag="{x:Static media:BenchmarkVerdict.Incorrect}" Click="OnVerdict" Padding="8,3" Margin="0,0,4,0" />
+                                        <Button Content="Unsure" Tag="{x:Static media:BenchmarkVerdict.Uncertain}" Click="OnVerdict" Padding="8,3" Margin="0,0,4,0" />
+                                        <Button Content="Reset" Tag="{x:Static media:BenchmarkVerdict.Unreviewed}" Click="OnVerdict" Padding="8,3" />
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding Verdict, StringFormat=Your review: {0}}" FontSize="12" Margin="0,4" />
+                                    <Expander Header="Details and recognized text" FontSize="12">
+                                        <StackPanel>
+                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Foreground="#536273" Margin="0,4" />
+                                        <TextBlock Text="{Binding EvidenceText}" TextWrapping="Wrap" Margin="0,4" />
+                                        <TextBox Text="{Binding RecognizedText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="160"
+                                                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" />
+                                        </StackPanel>
+                                    </Expander>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
